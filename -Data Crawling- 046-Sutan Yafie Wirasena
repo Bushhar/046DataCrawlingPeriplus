@@ -1,0 +1,435 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 67,
+   "id": "fd614c23-8f58-4fec-9d72-6d7d3f50c353",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import requests\n",
+    "import pandas as pd\n",
+    "from bs4 import BeautifulSoup\n",
+    "from selenium import webdriver\n",
+    "import chromedriver_autoinstaller\n",
+    "import csv"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 68,
+   "id": "a4c29dc2-bbfd-41e3-9165-6de9718f3e7b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from termcolor import colored"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 69,
+   "id": "6ae9c2c9-95c8-4616-a005-998a72a6fab8",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'C:\\\\Users\\\\Asus\\\\anaconda3\\\\lib\\\\site-packages\\\\chromedriver_autoinstaller\\\\114\\\\chromedriver.exe'"
+      ]
+     },
+     "execution_count": 69,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#INSTALL BROWSER SUCH CHROME OR EDGE\n",
+    "chromedriver_autoinstaller.install()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 70,
+   "id": "f9427aee-91c7-4566-847b-3892ef3c7906",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#USE THE INSTALLED BROWSER FOR SELENIUM\n",
+    "browser = webdriver.Chrome()\n",
+    "browser.get(\"https://www.periplus.com/recommendations/Editor%27s+Pick\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 71,
+   "id": "2dd7551b-77ee-4f3b-acb3-e27e8cc5d729",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "page = requests.get(\"https://www.periplus.com/recommendations/Editor%27s+Pick\")\n",
+    "soup = BeautifulSoup(browser.page_source,\"lxml\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 72,
+   "id": "cc4e7ae3-6654-40b9-b9f1-e8bdcc1df4fa",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "row = soup.find('div', class_ = 'single-product')\n",
+    "Book = row.find('h3').find('a').text\n",
+    "Author = row.find(class_ = 'product-author author-category').text.strip()\n",
+    "Bindings = row.find(class_ = 'product-binding').text.strip()\n",
+    "price = row.find(class_ = 'product-price').text.strip()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 73,
+   "id": "eb87e11c-0f10-4b98-9d73-bb3453d83580",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rows = soup.find_all('div', class_='single-product')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 74,
+   "id": "5fa0e61c-0aea-476b-94a3-7d5df1afdc30",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'A Man Called Ove : Now a major film starring Tom Hanks...'"
+      ]
+     },
+     "execution_count": 74,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "book"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 75,
+   "id": "b21811ff-99bb-4687-842e-a7261abd2577",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import re\n",
+    "success = True\n",
+    "\n",
+    "data = []\n",
+    "for row in rows:\n",
+    "    book_element = row.find('h3').find('a')\n",
+    "    if book_element:\n",
+    "        book_title = book_element.text.strip()\n",
+    "    else:\n",
+    "        book_title = \"N/A\"\n",
+    "\n",
+    "    author = row.find(class_='product-author author-category')\n",
+    "    if author:\n",
+    "        author_name = author.text.strip()\n",
+    "    else:\n",
+    "        author_name = \"N/A\"\n",
+    "\n",
+    "    bindings = row.find(class_='product-binding')\n",
+    "    if bindings:\n",
+    "        binding_type = bindings.text.strip()\n",
+    "    else:\n",
+    "        binding_type = \"N/A\"\n",
+    "\n",
+    "    price_element = row.find(class_='product-price')\n",
+    "    if price_element:\n",
+    "        price_text = price_element.text.strip()\n",
+    "        discount_percentage = \"N/A\"\n",
+    "        original_price = \"N/A\"\n",
+    "        discount_price = \"N/A\"\n",
+    "\n",
+    "        # Alternatif dari nox/elseif menggunakan regex untuk mencocokkan diskon dan harga setelah diskon\n",
+    "        discount_pattern = r'(\\-\\d+\\%)'\n",
+    "        price_pattern = r'Rp\\s?([\\d\\.,]+)'\n",
+    "\n",
+    "        discount_match = re.search(discount_pattern, price_text)\n",
+    "        price_match = re.search(price_pattern, price_text)\n",
+    "\n",
+    "        if discount_match:\n",
+    "            discount_percentage = discount_match.group(1)\n",
+    "        if price_match:\n",
+    "            original_price = 'Rp ' + price_match.group(1).replace(',', '')\n",
+    "\n",
+    "        if discount_percentage != \"N/A\" and original_price != \"N/A\":\n",
+    "            discount_price = str(int(float(original_price[3:].replace('.', '')) * (100 - float(discount_percentage.strip('%'))) / 100))\n",
+    "\n",
+    "    df = {\n",
+    "        'Book': book_title,\n",
+    "        'Author': author_name,\n",
+    "        'Bindings': binding_type,\n",
+    "        'Price': original_price,\n",
+    "        'Discount Percentage': discount_percentage,\n",
+    "        'Discount Price': 'Rp ' + discount_price,\n",
+    "    }\n",
+    "    data.append(df)\n",
+    "\n",
+    "df = pd.DataFrame(data)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 64,
+   "id": "a03032e8-2b8e-4d9b-9f25-4f4eb3cca127",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Book</th>\n",
+       "      <th>Author</th>\n",
+       "      <th>Bindings</th>\n",
+       "      <th>Price</th>\n",
+       "      <th>Discount Percentage</th>\n",
+       "      <th>Discount Price</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>A Man Called Ove : Now a major film starring T...</td>\n",
+       "      <td>Backman, Fredrik</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 200000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Forrest Gump</td>\n",
+       "      <td>Groom, Winston</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 278000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Twelve Years a Slave</td>\n",
+       "      <td>Northrup, Solomon</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 163000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>The Godfather: 50th Anniversary Edition</td>\n",
+       "      <td>Puzo, Mario</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 340000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>All Quiet on the Western Front</td>\n",
+       "      <td>Remarque, Erich Maria</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 134000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>...</th>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>103</th>\n",
+       "      <td>Metropolis</td>\n",
+       "      <td>Von Harbou, Thea</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 184000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>104</th>\n",
+       "      <td>The Color Purple</td>\n",
+       "      <td>Walker, Alice</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 278000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>105</th>\n",
+       "      <td>The Color Purple</td>\n",
+       "      <td>Walker, Alice</td>\n",
+       "      <td>Hardcover</td>\n",
+       "      <td>Rp 600000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>106</th>\n",
+       "      <td>The Devil Wears Prada: A Novel</td>\n",
+       "      <td>Weisberger, Lauren</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 180000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>107</th>\n",
+       "      <td>Trainspotting</td>\n",
+       "      <td>Welsh, Irvine</td>\n",
+       "      <td>Paperback</td>\n",
+       "      <td>Rp 200000</td>\n",
+       "      <td>N/A</td>\n",
+       "      <td>Rp N/A</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>108 rows × 6 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                                  Book                 Author  \\\n",
+       "0    A Man Called Ove : Now a major film starring T...       Backman, Fredrik   \n",
+       "1                                         Forrest Gump         Groom, Winston   \n",
+       "2                                 Twelve Years a Slave      Northrup, Solomon   \n",
+       "3              The Godfather: 50th Anniversary Edition            Puzo, Mario   \n",
+       "4                       All Quiet on the Western Front  Remarque, Erich Maria   \n",
+       "..                                                 ...                    ...   \n",
+       "103                                         Metropolis       Von Harbou, Thea   \n",
+       "104                                   The Color Purple          Walker, Alice   \n",
+       "105                                   The Color Purple          Walker, Alice   \n",
+       "106                     The Devil Wears Prada: A Novel     Weisberger, Lauren   \n",
+       "107                                      Trainspotting          Welsh, Irvine   \n",
+       "\n",
+       "      Bindings      Price Discount Percentage Discount Price  \n",
+       "0    Paperback  Rp 200000                 N/A         Rp N/A  \n",
+       "1    Paperback  Rp 278000                 N/A         Rp N/A  \n",
+       "2    Paperback  Rp 163000                 N/A         Rp N/A  \n",
+       "3    Paperback  Rp 340000                 N/A         Rp N/A  \n",
+       "4    Paperback  Rp 134000                 N/A         Rp N/A  \n",
+       "..         ...        ...                 ...            ...  \n",
+       "103  Paperback  Rp 184000                 N/A         Rp N/A  \n",
+       "104  Paperback  Rp 278000                 N/A         Rp N/A  \n",
+       "105  Hardcover  Rp 600000                 N/A         Rp N/A  \n",
+       "106  Paperback  Rp 180000                 N/A         Rp N/A  \n",
+       "107  Paperback  Rp 200000                 N/A         Rp N/A  \n",
+       "\n",
+       "[108 rows x 6 columns]"
+      ]
+     },
+     "execution_count": 64,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 76,
+   "id": "0647c893-a4ff-43bb-9161-0bb005ec1a6d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df.to_csv('Yafie_046_DataCrawlingBuku Buku.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 77,
+   "id": "7e05233e-5b57-4789-858b-dd35236ed54d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Boom = colored(\"Scraping berhasil! Data telah disimpan.\", 'green')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "id": "28bd28a7-11fa-4559-834a-6a6f4b57046c",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'Scraping berhasil! Data telah disimpan.'"
+      ]
+     },
+     "execution_count": 78,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Boom"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "948cdbea-caba-4e34-8e93-3fac9b3d9233",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
